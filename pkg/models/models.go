@@ -22,9 +22,9 @@ type ImageFrame struct {
 
 // FeatureSet holds detected keypoints and their descriptors (stub descriptor bytes).
 type FeatureSet struct {
-	FrameID    int      `json:"frame_id"`
-	Keypoints  []Point2 `json:"keypoints"`
-	Descriptor []byte   `json:"-"`
+	FrameID     int        `json:"frame_id"`
+	Keypoints   []Point2   `json:"keypoints"`
+	Descriptors [][]float64 `json:"-"`
 }
 
 // Point2 is a 2D point.
@@ -33,11 +33,18 @@ type Point2 struct {
 	Y float64 `json:"y"`
 }
 
-// MatchPair holds verified feature correspondences between two frames (stub).
+// Correspondence is a matched keypoint index pair.
+type Correspondence struct {
+	QueryIdx int `json:"query_idx"`
+	TrainIdx int `json:"train_idx"`
+}
+
+// MatchPair holds verified feature correspondences between two frames.
 type MatchPair struct {
-	FrameIDA int   `json:"frame_id_a"`
-	FrameIDB int   `json:"frame_id_b"`
-	Count    int   `json:"count"`
+	FrameIDA   int              `json:"frame_id_a"`
+	FrameIDB   int              `json:"frame_id_b"`
+	Matches    []Correspondence `json:"matches"`
+	InlierMask []byte           `json:"inlier_mask"`
 }
 
 // Point3D represents a reconstructed landmark.

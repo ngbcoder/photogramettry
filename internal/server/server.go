@@ -13,6 +13,8 @@ import (
 	"github.com/ngbcoder/photogramettry/internal/events"
 	"github.com/ngbcoder/photogramettry/pkg/features"
 	"github.com/ngbcoder/photogramettry/pkg/ingest"
+	"github.com/ngbcoder/photogramettry/pkg/matcher"
+	"github.com/ngbcoder/photogramettry/pkg/models"
 	"github.com/ngbcoder/photogramettry/internal/project"
 )
 
@@ -70,6 +72,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("PUT /api/projects/{id}", s.handleProjectUpdate)
 	s.mux.HandleFunc("POST /api/ingest", s.handleIngest)
 	s.mux.HandleFunc("POST /api/features/run", s.handleFeatures)
+	s.mux.HandleFunc("POST /api/match/run", s.handleMatch)
 	s.mux.Handle("/", http.FileServer(http.Dir(frontendDir())))
 }
 
@@ -247,6 +250,48 @@ func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
 	}
 	s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "features", "status": "done", "count": len(sets)}})
 	writeJSON(w, http.StatusOK, map[string]any{"features": sets, "count": len(sets)})
+}
+
+func (s *Server) handleMatch(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string  `json:"input_dir"`
+		Detector string  `json:"detector"`
+		Workers  int     `json:"workers"`
+		Ratio    float64 `json:"ratio"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	frames, err := ingest.IngestDir(req.InputDir)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	paths := make([]string, len(frames))
+	for i, fr := range frames {
+		paths[i] = fr.Path
+	}
+	det, err := features.NewDetector(req.Detector)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	sets, err := features.NewPool(det, req.Workers).Run(r.Context(), paths)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	m := matcher.NewMatcher(req.Ratio)
+	pairs := []models.MatchPair{}
+	for i := 0; i+1 < len(frames); i++ {
+		pair := m.Match(frames[i].ID, frames[i+1].ID, sets[i], sets[i+1])
+		pairs = append(pairs, pair)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"pairs": pairs, "count": len(pairs)})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
