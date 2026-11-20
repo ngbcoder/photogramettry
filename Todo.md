@@ -3,9 +3,9 @@
 Tracking file. Update checkboxes as work completes. Milestones are intentionally granular.
 
 ## Phase 0 — Repository & Tooling
-- [ ] Initialize git repository
-- [ ] Create GitHub repository (ngbcoder/photogramettry)
-- [ ] Add .gitignore (Go, Node, OpenCV, OS)
+- [x] Initialize git repository
+- [x] Create GitHub repository (ngbcoder/photogramettry)
+- [x] Add .gitignore (Go, Node, OpenCV, OS)
 - [ ] Add Makefile (build, test, lint, dev)
 - [ ] Add Dockerfile (OpenCV + Go + Node multi-stage)
 - [ ] Add README with dev setup (OpenCV install per OS)
@@ -14,26 +14,26 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 
 ## Phase 1 — Backend Foundation (Go)
 - [ ] Choose HTTP router (net/http ServeMux vs chi) and document
-- [ ] Create `cmd/photogen-web/main.go` (server entrypoint, flags: --port, --input, --output)
-- [ ] Add graceful shutdown + signal handling
-- [ ] Add structured logging (slog) with verbose flag
+- [x] Create `cmd/photogen-web/main.go` (server entrypoint, flags: --port, --input, --output)
+- [x] Add graceful shutdown + signal handling
+- [x] Add structured logging (slog) with verbose flag
 - [ ] Add OpenCV availability check on startup (fail fast with helpful message)
-- [ ] Add CORS + static file serving for frontend build
-- [ ] Add health endpoint `/api/health`
-- [ ] Add project model (`Project` struct) + `.photogen` JSON persistence
-- [ ] Add project endpoints: create/open/save/list recent
-- [ ] Add directory listing endpoint (for path picker)
+- [x] Add CORS + static file serving for frontend build
+- [x] Add health endpoint `/api/health`
+- [x] Add project model (`Project` struct) + `.photogen` JSON persistence
+- [x] Add project endpoints: create/open/save/list recent
+- [x] Add directory listing endpoint (for path picker)
 - [ ] Add thumbnail generation endpoint (cached)
-- [ ] Add WebSocket (or SSE) event bus for progress/logs
-- [ ] Add context/cancellation plumbing for long-running stages
+- [x] Add WebSocket (or SSE) event bus for progress/logs
+- [x] Add context/cancellation plumbing for long-running stages
 - [ ] Add unit tests for project persistence
 
 ## Phase 2 — Frontend Foundation (React + Vite)
-- [ ] Scaffold Vite React TS app under `frontend/`
-- [ ] Add Tailwind CSS
-- [ ] Add routing/layout (sidebar, main panel, status bar)
-- [ ] Add API client (fetch wrapper + base URL)
-- [ ] Add WebSocket client for events
+- [x] Scaffold Vite React TS app under `frontend/`
+- [x] Add Tailwind CSS
+- [x] Add routing/layout (sidebar, main panel, status bar)
+- [x] Add API client (fetch wrapper + base URL)
+- [x] Add WebSocket client for events
 - [ ] Add global state (zustand): project, images, stage status, logs
 - [ ] Add dark/light theme toggle
 - [ ] Add reusable components: Button, Card, Modal, ProgressBar, LogConsole
@@ -42,9 +42,9 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 - [ ] Add loading skeletons
 
 ## Phase 3 — 3D Viewport (Three.js) foundation
-- [ ] Add three.js + OrbitControls
-- [ ] Create Viewport3D component (canvas, resize handling)
-- [ ] Add point cloud renderer (BufferGeometry, vertex colors, size control)
+- [x] Add three.js + OrbitControls
+- [x] Create Viewport3D component (canvas, resize handling)
+- [x] Add point cloud renderer (BufferGeometry, vertex colors, size control)
 - [ ] Add mesh renderer (geometry + material + texture)
 - [ ] Add camera frustum helper
 - [ ] Add grid/axes helpers
@@ -53,24 +53,24 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 
 ## Phase 4 — M1: Ingest + Features (first milestone)
 ### Backend
-- [ ] Implement `pkg/ingest/exif.go` (EXIF focal length, dimensions)
-- [ ] Implement `pkg/ingest/camera_db.go` (sensor width lookup)
-- [ ] Build `ImageFrame` list + intrinsics K matrix
-- [ ] Add `/api/ingest` endpoint (input dir -> frames)
-- [ ] Add progress events during ingest
-- [ ] Implement `pkg/features/detector.go` interface (AKAZE/ORB)
-- [ ] Implement `pkg/features/pool.go` bounded worker pool
-- [ ] Add `/api/features/run` endpoint
-- [ ] Enforce `Mat.Close()` in all feature paths
+- [x] Implement `pkg/ingest/exif.go` (EXIF focal length, dimensions)
+- [x] Implement `pkg/ingest/camera_db.go` (sensor width lookup)
+- [x] Build `ImageFrame` list + intrinsics K matrix
+- [x] Add `/api/ingest` endpoint (input dir -> frames)
+- [x] Add progress events during ingest
+- [x] Implement `pkg/features/detector.go` interface (AKAZE/ORB)
+- [x] Implement `pkg/features/pool.go` bounded worker pool
+- [x] Add `/api/features/run` endpoint
+- [x] Enforce `Mat.Close()` in all feature paths (opencv path)
 - [ ] Cache FeatureSet per frame (disk)
 - [ ] Add `/api/features/keypoints` endpoint (for overlay)
 - [ ] Add export keypoints PLY
 - [ ] Unit tests for ingest + features
 ### Frontend
-- [ ] ImageGrid component (thumbnails, metadata)
+- [x] ImageGrid component (basic grid)
 - [ ] Image detail panel (dims, focal, K)
-- [ ] Run ingest button + progress
-- [ ] Run features button + progress
+- [x] Run ingest button + progress
+- [x] Run features button + progress
 - [ ] Keypoint overlay toggle on thumbnail/preview
 - [ ] Stage status panel (M1 stages)
 - [ ] Log console filtering
