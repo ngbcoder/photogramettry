@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Viewport3D from './components/Viewport3D'
+import ImagesPanel from './components/ImagesPanel'
 
 const API = '/api'
 
@@ -40,6 +41,10 @@ export default function App() {
           <span className="font-medium">PhotoGen Web</span>
         </header>
         <section className="flex-1 p-4 grid grid-cols-2 gap-4">
+          <div className="border border-gray-200 dark:border-gray-700 rounded p-4">
+            <h2 className="font-semibold mb-2">Images</h2>
+            <ImagesPanel />
+          </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded p-4">
             <h2 className="font-semibold mb-2">3D Viewport</h2>
             <div className="h-64 rounded overflow-hidden">
