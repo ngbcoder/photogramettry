@@ -1,0 +1,43 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+photogen
+photogen-web
+bin/
+
+# Go
+vendor/
+*.test
+*.out
+coverage.*
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Build artifacts
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCV / CGO
+*.o
+*.a
+
+# Logs
+*.log
+
+# Project files (optional local)
+*.photogen.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
