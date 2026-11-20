@@ -77,10 +77,10 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 
 ## Phase 5 — M2: Feature Matching + Two-View Geometry
 ### Backend
-- [ ] Implement `pkg/matcher/matcher.go` (Hamming/FLANN)
-- [ ] Implement Lowe's ratio test (threshold configurable)
-- [ ] Implement `pkg/matcher/ransac.go` (Essential matrix + inliers)
-- [ ] Add `/api/match/run` endpoint (pairwise)
+- [x] Implement `pkg/matcher/matcher.go` (brute-force + ratio test)
+- [x] Implement Lowe's ratio test (threshold configurable)
+- [x] Implement `pkg/matcher/ransac.go` (Essential matrix + inliers)
+- [x] Add `/api/match/run` endpoint (pairwise)
 - [ ] Add match visualization data endpoint
 - [ ] Implement two-view triangulation (SVD, gonum/mat)
 - [ ] Add `/api/sfm/init` endpoint (seed pair -> cloud + poses)
