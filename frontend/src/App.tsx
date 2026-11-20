@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Viewport3D from './components/Viewport3D'
 
 const API = '/api'
 
@@ -41,8 +42,8 @@ export default function App() {
         <section className="flex-1 p-4 grid grid-cols-2 gap-4">
           <div className="border border-gray-200 dark:border-gray-700 rounded p-4">
             <h2 className="font-semibold mb-2">3D Viewport</h2>
-            <div className="h-64 bg-black/80 rounded flex items-center justify-center text-gray-400">
-              Three.js viewport (coming soon)
+            <div className="h-64 rounded overflow-hidden">
+              <Viewport3D />
             </div>
           </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded p-4 flex flex-col">
