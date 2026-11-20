@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/ngbcoder/photogramettry/internal/events"
+	"github.com/ngbcoder/photogramettry/pkg/features"
+	"github.com/ngbcoder/photogramettry/pkg/ingest"
 	"github.com/ngbcoder/photogramettry/internal/project"
 )
 
@@ -66,6 +68,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/projects", s.handleProjectCreate)
 	s.mux.HandleFunc("GET /api/projects/{id}", s.handleProjectGet)
 	s.mux.HandleFunc("PUT /api/projects/{id}", s.handleProjectUpdate)
+	s.mux.HandleFunc("POST /api/ingest", s.handleIngest)
+	s.mux.HandleFunc("POST /api/features/run", s.handleFeatures)
 	s.mux.Handle("/", http.FileServer(http.Dir(frontendDir())))
 }
 
@@ -182,6 +186,67 @@ func (s *Server) handleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, updated)
+}
+
+func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string `json:"input_dir"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "ingest", "status": "running"}})
+	frames, err := ingest.IngestDir(req.InputDir)
+	if err != nil {
+		s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "ingest", "status": "error", "error": err.Error()}})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "ingest", "status": "done", "count": len(frames)}})
+	writeJSON(w, http.StatusOK, map[string]any{"frames": frames, "count": len(frames)})
+}
+
+func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string `json:"input_dir"`
+		Detector string `json:"detector"`
+		Workers  int    `json:"workers"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	frames, err := ingest.IngestDir(req.InputDir)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	paths := make([]string, len(frames))
+	for i, fr := range frames {
+		paths[i] = fr.Path
+	}
+	det, err := features.NewDetector(req.Detector)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	pool := features.NewPool(det, req.Workers)
+	s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "features", "status": "running"}})
+	sets, err := pool.Run(r.Context(), paths)
+	if err != nil {
+		s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "features", "status": "error", "error": err.Error()}})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	s.events.Publish(events.Event{Type: "stage", Data: map[string]any{"stage": "features", "status": "done", "count": len(sets)}})
+	writeJSON(w, http.StatusOK, map[string]any{"features": sets, "count": len(sets)})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
