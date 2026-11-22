@@ -122,7 +122,7 @@ func estimateEssential(idxs []int, a, b [][3]float64) *mat.Dense {
 	}
 	// SVD
 	var svd mat.SVD
-	ok := svd.Factorize(A, mat.SVDThin)
+	ok := svd.Factorize(A, mat.SVDThinU|mat.SVDFullV)
 	if !ok {
 		return nil
 	}

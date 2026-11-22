@@ -15,6 +15,8 @@ import (
 	"github.com/ngbcoder/photogramettry/pkg/ingest"
 	"github.com/ngbcoder/photogramettry/pkg/matcher"
 	"github.com/ngbcoder/photogramettry/pkg/models"
+	"github.com/ngbcoder/photogramettry/pkg/sfm"
+	"gonum.org/v1/gonum/mat"
 	"github.com/ngbcoder/photogramettry/internal/project"
 )
 
@@ -73,6 +75,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/ingest", s.handleIngest)
 	s.mux.HandleFunc("POST /api/features/run", s.handleFeatures)
 	s.mux.HandleFunc("POST /api/match/run", s.handleMatch)
+	s.mux.HandleFunc("POST /api/sfm/init", s.handleSfMInit)
 	s.mux.Handle("/", http.FileServer(http.Dir(frontendDir())))
 }
 
@@ -292,6 +295,116 @@ func (s *Server) handleMatch(w http.ResponseWriter, r *http.Request) {
 		pairs = append(pairs, pair)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"pairs": pairs, "count": len(pairs)})
+}
+
+func (s *Server) handleSfMInit(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string `json:"input_dir"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	frames, err := ingest.IngestDir(req.InputDir)
+	if err != nil || len(frames) < 2 {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "need at least 2 images"})
+		return
+	}
+	paths := make([]string, len(frames))
+	for i, fr := range frames {
+		paths[i] = fr.Path
+	}
+	det, _ := features.NewDetector("fast")
+	sets, err := features.NewPool(det, 4).Run(r.Context(), paths)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	m := matcher.NewMatcher(0.75)
+	pair := m.Match(frames[0].ID, frames[1].ID, sets[0], sets[1])
+
+	// normalized keypoints for first two frames
+	pts1 := make([][2]float64, len(pair.Matches))
+	pts2 := make([][2]float64, len(pair.Matches))
+	for i, mc := range pair.Matches {
+		pts1[i] = [2]float64{sets[0].Keypoints[mc.QueryIdx].X, sets[0].Keypoints[mc.QueryIdx].Y}
+		pts2[i] = [2]float64{sets[1].Keypoints[mc.TrainIdx].X, sets[1].Keypoints[mc.TrainIdx].Y}
+	}
+	// build K matrices
+	k1 := frames[0].Intrinsics.KMatrix
+	k2 := frames[1].Intrinsics.KMatrix
+	if k1 == nil {
+		k1 = matNewK(frames[0].Intrinsics.FocalLengthX, frames[0].Intrinsics.FocalLengthY, frames[0].Intrinsics.PrincipalX, frames[0].Intrinsics.PrincipalY)
+	}
+	if k2 == nil {
+		k2 = matNewK(frames[1].Intrinsics.FocalLengthX, frames[1].Intrinsics.FocalLengthY, frames[1].Intrinsics.PrincipalX, frames[1].Intrinsics.PrincipalY)
+	}
+	// RANSAC essential
+	mask, E := matcher.RANSACEssential(pair, sets[0].Keypoints, sets[1].Keypoints, k1, k2, 1.0, 200)
+	if E == nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "essential matrix failed"})
+		return
+	}
+	// filter inliers
+	inlierPts1 := [][2]float64{}
+	inlierPts2 := [][2]float64{}
+	for i := range pair.Matches {
+		if mask[i] == 1 {
+			inlierPts1 = append(inlierPts1, pts1[i])
+			inlierPts2 = append(inlierPts2, pts2[i])
+		}
+	}
+	pair.InlierMask = mask
+	R, t := sfm.RecoverPose(E, k1, inlierPts1, inlierPts2)
+
+	// triangulate
+	P1 := sfm.ProjectionMatrix(k1, matEye3(), matZero3x1())
+	P2 := sfm.ProjectionMatrix(k2, R, t)
+	cloud := [][3]float64{}
+	for i := range inlierPts1 {
+		X := sfm.TriangulatePoint(P1, P2, inlierPts1[i], inlierPts2[i])
+		cloud = append(cloud, X)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"points": cloud,
+		"count":  len(cloud),
+		"pose":   map[string]any{"R": matToSlice(R), "t": matToSlice(t)},
+	})
+}
+
+func matNewK(fx, fy, cx, cy float64) *mat.Dense {
+	// local helper to avoid import cycle
+	return newKMatrix(fx, fy, cx, cy)
+}
+
+func matEye3() *mat.Dense {
+	return mat.NewDense(3, 3, []float64{1, 0, 0, 0, 1, 0, 0, 0, 1})
+}
+
+func matZero3x1() *mat.Dense {
+	return mat.NewDense(3, 1, []float64{0, 0, 0})
+}
+
+func newKMatrix(fx, fy, cx, cy float64) *mat.Dense {
+	return mat.NewDense(3, 3, []float64{fx, 0, cx, 0, fy, cy, 0, 0, 1})
+}
+
+func matToSlice(m *mat.Dense) [][]float64 {
+	if m == nil {
+		return nil
+	}
+	r, c := m.Dims()
+	out := make([][]float64, r)
+	for i := 0; i < r; i++ {
+		out[i] = make([]float64, c)
+		for j := 0; j < c; j++ {
+			out[i][j] = m.At(i, j)
+		}
+	}
+	return out
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
