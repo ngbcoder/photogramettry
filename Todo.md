@@ -147,9 +147,9 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 - [ ] Fix leaks found
 
 ## Phase 10 — Packaging & Release
-- [ ] Cross-compile scripts (linux/darwin/windows)
-- [ ] GitHub Actions CI (build + test)
-- [ ] GitHub Actions release workflow (binaries)
+- [x] GitHub Actions CI (build + test)
+- [x] GitHub Actions release workflow (binaries)
+- [ ] Cross-compile scripts (linux/darwin/windows) (manual)
 - [ ] Docker image publish
 - [ ] User docs
 - [ ] Changelog
