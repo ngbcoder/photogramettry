@@ -85,6 +85,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/sfm/run", s.handleSfMRun)
 	s.mux.HandleFunc("POST /api/mvs/run", s.handleMVS)
 	s.mux.HandleFunc("POST /api/mesh/run", s.handleMesh)
+	s.mux.HandleFunc("POST /api/export", s.handleExport)
 	s.mux.Handle("/", http.FileServer(http.Dir(frontendDir())))
 }
 
@@ -580,6 +581,89 @@ func (s *Server) handleMesh(w http.ResponseWriter, r *http.Request) {
 	uvs := mesh.PlanarUV(m)
 	_ = export.WriteOBJTextured(s.cfg.Output+"/recon.obj", m, uvs)
 	writeJSON(w, http.StatusOK, map[string]any{"vertices": len(cloud), "triangles": len(tris)})
+}
+
+func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string `json:"input_dir"`
+		Format   string `json:"format"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	if req.Format == "" {
+		req.Format = "all"
+	}
+	// Run mesh pipeline to ensure files exist.
+	frames, _ := ingest.IngestDir(req.InputDir)
+	paths := make([]string, len(frames))
+	for i, fr := range frames {
+		paths[i] = fr.Path
+	}
+	det, _ := features.NewDetector("fast")
+	sets, _ := features.NewPool(det, 4).Run(r.Context(), paths)
+	mm := matcher.NewMatcher(0.75)
+	pair := mm.Match(0, 1, sets[0], sets[1])
+	pts1 := make([][2]float64, len(pair.Matches))
+	pts2 := make([][2]float64, len(pair.Matches))
+	for i, mc := range pair.Matches {
+		pts1[i] = [2]float64{sets[0].Keypoints[mc.QueryIdx].X, sets[0].Keypoints[mc.QueryIdx].Y}
+		pts2[i] = [2]float64{sets[1].Keypoints[mc.TrainIdx].X, sets[1].Keypoints[mc.TrainIdx].Y}
+	}
+	k1 := frames[0].Intrinsics.KMatrix
+	if k1 == nil {
+		k1 = newKMatrix(frames[0].Intrinsics.FocalLengthX, frames[0].Intrinsics.FocalLengthY, frames[0].Intrinsics.PrincipalX, frames[0].Intrinsics.PrincipalY)
+	}
+	k2 := frames[1].Intrinsics.KMatrix
+	if k2 == nil {
+		k2 = newKMatrix(frames[1].Intrinsics.FocalLengthX, frames[1].Intrinsics.FocalLengthY, frames[1].Intrinsics.PrincipalX, frames[1].Intrinsics.PrincipalY)
+	}
+	mask, E := matcher.RANSACEssential(pair, sets[0].Keypoints, sets[1].Keypoints, k1, k2, 1.0, 200)
+	var in1, in2 [][2]float64
+	for i := range pair.Matches {
+		if mask[i] == 1 {
+			in1 = append(in1, pts1[i])
+			in2 = append(in2, pts2[i])
+		}
+	}
+	R, t := sfm.RecoverPose(E, k1, in1, in2)
+	P1 := sfm.ProjectionMatrix(k1, matEye3(), matZero3x1())
+	P2 := sfm.ProjectionMatrix(k2, R, t)
+	var cloud [][3]float64
+	for i := range in1 {
+		cloud = append(cloud, sfm.TriangulatePoint(P1, P2, in1[i], in2[i]))
+	}
+	files := []string{}
+	if req.Format == "ply" || req.Format == "all" {
+		p := s.cfg.Output + "/export.ply"
+		_ = export.WritePLY(p, toPoint3D(cloud))
+		files = append(files, p)
+	}
+	if req.Format == "obj" || req.Format == "all" {
+		pts2d := make([][2]float64, len(cloud))
+		for i, c := range cloud {
+			pts2d[i] = [2]float64{c[0], c[1]}
+		}
+		tris := mesh.Delaunay2D(pts2d)
+		m := models.Mesh{Vertices: cloud, Triangles: tris}
+		uvs := mesh.PlanarUV(m)
+		p := s.cfg.Output + "/export.obj"
+		_ = export.WriteOBJTextured(p, m, uvs)
+		files = append(files, p)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"files": files})
+}
+
+func toPoint3D(cloud [][3]float64) []models.Point3D {
+	out := make([]models.Point3D, len(cloud))
+	for i, c := range cloud {
+		out[i] = models.Point3D{Position: c, Color: [3]uint8{128, 128, 128}}
+	}
+	return out
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
