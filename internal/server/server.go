@@ -23,6 +23,7 @@ import (
 	"github.com/ngbcoder/photogramettry/pkg/mvs"
 	"github.com/ngbcoder/photogramettry/pkg/sfm"
 	"gonum.org/v1/gonum/mat"
+	_ "net/http/pprof"
 	"github.com/ngbcoder/photogramettry/internal/project"
 )
 
@@ -72,6 +73,8 @@ func New(cfg Config) (*Server, error) {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/health", s.handleHealth)
+	s.mux.HandleFunc("GET /api/version", s.handleVersion)
+	s.mux.Handle("/debug/pprof/", http.DefaultServeMux)
 	s.mux.HandleFunc("GET /api/events", s.events.ServeSSE)
 	s.mux.HandleFunc("GET /api/fs/list", s.handleFSList)
 	s.mux.HandleFunc("GET /api/projects", s.handleProjectList)
@@ -729,6 +732,13 @@ func (s *Server) handlePoisson(w http.ResponseWriter, r *http.Request) {
 	uvs := mesh.PlanarUV(m)
 	_ = export.WriteOBJTextured(s.cfg.Output+"/poisson.obj", m, uvs)
 	writeJSON(w, http.StatusOK, map[string]any{"vertices": len(m.Vertices), "triangles": len(m.Triangles)})
+}
+
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"version": "0.1.0-dev",
+		"module":  "github.com/ngbcoder/photogramettry",
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
