@@ -103,7 +103,11 @@ func Delaunay2D(pts [][2]float64) []models.Triangle {
 }
 
 func pointInCircumcircle(a, b, c, p [2]float64) bool {
-	// standard determinant
+	// ensure CCW orientation
+	o := (b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0])
+	if o < 0 {
+		b, c = c, b
+	}
 	ax, ay := a[0], a[1]
 	bx, by := b[0], b[1]
 	cx, cy := c[0], c[1]
