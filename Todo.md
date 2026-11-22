@@ -149,7 +149,7 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 ## Phase 10 — Packaging & Release
 - [x] GitHub Actions CI (build + test)
 - [x] GitHub Actions release workflow (binaries)
-- [ ] Cross-compile scripts (linux/darwin/windows) (manual)
+- [x] Cross-compile Makefile targets (linux/darwin/windows)
 - [ ] Docker image publish
 - [ ] User docs
 - [ ] Changelog
