@@ -82,6 +82,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/features/run", s.handleFeatures)
 	s.mux.HandleFunc("POST /api/match/run", s.handleMatch)
 	s.mux.HandleFunc("POST /api/sfm/init", s.handleSfMInit)
+	s.mux.HandleFunc("POST /api/sfm/run", s.handleSfMRun)
 	s.mux.HandleFunc("POST /api/mvs/run", s.handleMVS)
 	s.mux.Handle("/", http.FileServer(http.Dir(frontendDir())))
 }
@@ -457,6 +458,52 @@ func (s *Server) handleMVS(w http.ResponseWriter, r *http.Request) {
 	m := mesh.GridMesh(10, 10)
 	_ = export.WriteOBJ(s.cfg.Output+"/mesh.obj", m)
 	writeJSON(w, http.StatusOK, map[string]any{"points": len(cloud), "triangles": len(m.Triangles)})
+}
+
+func (s *Server) handleSfMRun(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string `json:"input_dir"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	frames, err := ingest.IngestDir(req.InputDir)
+	if err != nil || len(frames) < 2 {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "need at least 2 images"})
+		return
+	}
+	paths := make([]string, len(frames))
+	for i, fr := range frames {
+		paths[i] = fr.Path
+	}
+	det, _ := features.NewDetector("fast")
+	sets, err := features.NewPool(det, 4).Run(r.Context(), paths)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	matcherFn := func(i, j int) ([]int, [][2]float64, [][2]float64) {
+		mp := matcher.NewMatcher(0.75).Match(frames[i].ID, frames[j].ID, sets[i], sets[j])
+		idxs := make([]int, len(mp.Matches))
+		p1 := make([][2]float64, len(mp.Matches))
+		p2 := make([][2]float64, len(mp.Matches))
+		for k, mc := range mp.Matches {
+			idxs[k] = mc.QueryIdx
+			p1[k] = [2]float64{sets[i].Keypoints[mc.QueryIdx].X, sets[i].Keypoints[mc.QueryIdx].Y}
+			p2[k] = [2]float64{sets[j].Keypoints[mc.TrainIdx].X, sets[j].Keypoints[mc.TrainIdx].Y}
+		}
+		return idxs, p1, p2
+	}
+	k := frames[0].Intrinsics.KMatrix
+	if k == nil {
+		k = newKMatrix(frames[0].Intrinsics.FocalLengthX, frames[0].Intrinsics.FocalLengthY, frames[0].Intrinsics.PrincipalX, frames[0].Intrinsics.PrincipalY)
+	}
+	res := sfm.RunIncremental(len(frames), k, sets, matcherFn)
+	writeJSON(w, http.StatusOK, map[string]any{"poses": len(res.Poses), "points": len(res.Cloud)})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
