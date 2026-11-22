@@ -112,8 +112,8 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 
 ## Phase 7 — M4: Dense MVS + Mesh + Texture
 ### Backend
-- [ ] Implement SGBM depth maps (`pkg/mvs/sgbm.go`)
-- [ ] Implement depth map fusion (`pkg/mvs/fused_cloud.go`)
+- [x] Implement SGBM depth maps (`pkg/mvs/sgbm.go`) (SAD block matching)
+- [x] Implement depth map fusion (`pkg/mvs/fused_cloud.go`)
 - [ ] Implement Poisson reconstruction (`pkg/mesh/poisson.go`)
 - [ ] Implement UV unwrapping + texture baking (`pkg/mesh/texturing.go`)
 - [ ] Add `/api/mvs/run` endpoint
