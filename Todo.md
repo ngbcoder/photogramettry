@@ -114,6 +114,7 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 ### Backend
 - [x] Implement SGBM depth maps (`pkg/mvs/sgbm.go`) (SAD block matching)
 - [x] Implement depth map fusion (`pkg/mvs/fused_cloud.go`)
+- [x] Implement Delaunay 2D triangulation (`pkg/mesh/delaunay.go`)
 - [ ] Implement Poisson reconstruction (`pkg/mesh/poisson.go`)
 - [ ] Implement UV unwrapping + texture baking (`pkg/mesh/texturing.go`)
 - [ ] Add `/api/mvs/run` endpoint
