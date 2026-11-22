@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ingest, runFeatures } from '../api'
+import { ingest, runFeatures, runSfM } from '../api'
 
 type Frame = { id: number; path: string; width: number; height: number }
 
@@ -36,6 +36,19 @@ export default function ImagesPanel() {
     }
   }
 
+  const onSfM = async () => {
+    setBusy(true)
+    setStatus('running SfM...')
+    try {
+      const res = await runSfM(inputDir)
+      setStatus(`sfm done: ${res.count} points`)
+    } catch (e) {
+      setStatus(`error: ${e}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
@@ -58,6 +71,13 @@ export default function ImagesPanel() {
           disabled={busy || frames.length === 0}
         >
           Features
+        </button>
+        <button
+          className="px-3 py-1 rounded bg-purple-600 text-white text-sm disabled:opacity-50"
+          onClick={onSfM}
+          disabled={busy || frames.length < 2}
+        >
+          SfM
         </button>
       </div>
       <div className="text-sm text-gray-500">{status}</div>

@@ -25,3 +25,13 @@ export async function listDir(path: string) {
   if (!r.ok) throw new Error(await r.text())
   return r.json()
 }
+
+export async function runSfM(inputDir: string) {
+  const r = await fetch(`${API}/sfm/init`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input_dir: inputDir }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
