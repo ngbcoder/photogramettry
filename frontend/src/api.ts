@@ -55,3 +55,13 @@ export async function runMesh(inputDir: string) {
   if (!r.ok) throw new Error(await r.text())
   return r.json()
 }
+
+export async function runExport(inputDir: string, format: string) {
+  const r = await fetch(`${API}/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input_dir: inputDir, format }),
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
