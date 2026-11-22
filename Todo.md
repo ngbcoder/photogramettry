@@ -143,7 +143,7 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 - [ ] Mat lifecycle audit
 - [ ] Benchmark feature extraction
 - [ ] Benchmark matching
-- [ ] Profile memory (pprof endpoint)
+- [x] Profile memory (pprof endpoint)
 - [ ] Fix leaks found
 
 ## Phase 10 — Packaging & Release
