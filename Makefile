@@ -21,3 +21,12 @@ lint:
 
 docker:
 	docker build -t photogen-web .
+
+build-linux:
+	GOOS=linux GOARCH=amd64 go build -o bin/photogen-web-linux ./cmd/photogen-web
+
+build-darwin:
+	GOOS=darwin GOARCH=amd64 go build -o bin/photogen-web-darwin ./cmd/photogen-web
+
+build-windows:
+	GOOS=windows GOARCH=amd64 go build -o bin/photogen-web.exe ./cmd/photogen-web
