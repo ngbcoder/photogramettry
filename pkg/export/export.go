@@ -26,16 +26,43 @@ func WritePLY(path string, cloud []models.Point3D) error {
 
 // WriteOBJ writes a mesh to OBJ.
 func WriteOBJ(path string, m models.Mesh) error {
+	return WriteOBJTextured(path, m, nil)
+}
+
+// WriteOBJTextured writes a mesh to OBJ with optional UVs and MTL reference.
+func WriteOBJTextured(path string, m models.Mesh, uvs [][2]float64) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+	fmt.Fprintf(f, "mtllib %s.mtl\n", baseName(path))
 	for _, v := range m.Vertices {
 		fmt.Fprintf(f, "v %f %f %f\n", v[0], v[1], v[2])
 	}
+	if uvs != nil {
+		for _, uv := range uvs {
+			fmt.Fprintf(f, "vt %f %f\n", uv[0], uv[1])
+		}
+	}
 	for _, t := range m.Triangles {
-		fmt.Fprintf(f, "f %d %d %d\n", t.A+1, t.B+1, t.C+1)
+		if uvs != nil {
+			fmt.Fprintf(f, "f %d/%d %d/%d %d/%d\n", t.A+1, t.A+1, t.B+1, t.B+1, t.C+1, t.C+1)
+		} else {
+			fmt.Fprintf(f, "f %d %d %d\n", t.A+1, t.B+1, t.C+1)
+		}
 	}
 	return nil
+}
+
+func baseName(path string) string {
+	// strip extension
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' || path[i] == '.' {
+			if path[i] == '.' {
+				return path[:i]
+			}
+		}
+	}
+	return path
 }
