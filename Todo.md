@@ -95,7 +95,7 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 ## Phase 6 — M3: Incremental SfM + Bundle Adjustment
 ### Backend
 - [x] Implement PnP pose solver (`pkg/sfm/pnp.go`) (DLT)
-- [ ] Incremental registration loop (add images one by one)
+- [x] Incremental registration loop (add images one by one) (simplified)
 - [ ] Track 2D-3D correspondences
 - [x] Implement sparse BA (`pkg/sfm/bundle_adjustment.go`) via gonum (point refinement)
 - [ ] Optional Ceres CGO binding if available
