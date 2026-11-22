@@ -116,7 +116,7 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 - [x] Implement depth map fusion (`pkg/mvs/fused_cloud.go`)
 - [x] Implement Delaunay 2D triangulation (`pkg/mesh/delaunay.go`)
 - [x] Add /api/mesh/run endpoint (Delaunay-based)
-- [ ] Implement Poisson reconstruction (`pkg/mesh/poisson.go`)
+- [x] Implement Poisson reconstruction (`pkg/mesh/poisson.go`) (simplified)
 - [x] Implement planar UV unwrapping (`pkg/mesh/texturing.go`)
 - [ ] Add `/api/mvs/run` endpoint
 - [ ] Add `/api/mesh/run` endpoint
