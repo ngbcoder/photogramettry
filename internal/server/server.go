@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,7 +17,10 @@ import (
 	"github.com/ngbcoder/photogramettry/pkg/features"
 	"github.com/ngbcoder/photogramettry/pkg/ingest"
 	"github.com/ngbcoder/photogramettry/pkg/matcher"
+	"github.com/ngbcoder/photogramettry/pkg/export"
+	"github.com/ngbcoder/photogramettry/pkg/mesh"
 	"github.com/ngbcoder/photogramettry/pkg/models"
+	"github.com/ngbcoder/photogramettry/pkg/mvs"
 	"github.com/ngbcoder/photogramettry/pkg/sfm"
 	"gonum.org/v1/gonum/mat"
 	"github.com/ngbcoder/photogramettry/internal/project"
@@ -76,6 +82,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/features/run", s.handleFeatures)
 	s.mux.HandleFunc("POST /api/match/run", s.handleMatch)
 	s.mux.HandleFunc("POST /api/sfm/init", s.handleSfMInit)
+	s.mux.HandleFunc("POST /api/mvs/run", s.handleMVS)
 	s.mux.Handle("/", http.FileServer(http.Dir(frontendDir())))
 }
 
@@ -405,6 +412,51 @@ func matToSlice(m *mat.Dense) [][]float64 {
 		}
 	}
 	return out
+}
+
+func (s *Server) handleMVS(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		InputDir string `json:"input_dir"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if req.InputDir == "" {
+		req.InputDir = s.cfg.Input
+	}
+	frames, err := ingest.IngestDir(req.InputDir)
+	if err != nil || len(frames) < 2 {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "need at least 2 images"})
+		return
+	}
+	// load grayscale
+	toGray := func(path string) ([][]uint8, int, int) {
+		f, _ := os.Open(path)
+		defer f.Close()
+		img, _, _ := image.Decode(f)
+		b := img.Bounds()
+		w, h := b.Dx(), b.Dy()
+		g := make([][]uint8, h)
+		for y := 0; y < h; y++ {
+			row := make([]uint8, w)
+			for x := 0; x < w; x++ {
+				r, gg, bb, _ := img.At(b.Min.X+x, b.Min.Y+y).RGBA()
+				row[x] = uint8((299*int(r>>8) + 587*int(gg>>8) + 114*int(bb>>8)) / 1000)
+			}
+			g[y] = row
+		}
+		return g, w, h
+	}
+	g1, _, _ := toGray(frames[0].Path)
+	g2, _, _ := toGray(frames[1].Path)
+	disp := mvs.ComputeDepthMap(g1, g2, 9, 64)
+	k := frames[0].Intrinsics
+	cloud := mvs.DepthToCloud(disp, k.FocalLengthX, k.FocalLengthY, k.PrincipalX, k.PrincipalY, 1.0)
+	_ = export.WritePLY(s.cfg.Output+"/dense.ply", cloud)
+	m := mesh.GridMesh(10, 10)
+	_ = export.WriteOBJ(s.cfg.Output+"/mesh.obj", m)
+	writeJSON(w, http.StatusOK, map[string]any{"points": len(cloud), "triangles": len(m.Triangles)})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

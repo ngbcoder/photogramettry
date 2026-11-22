@@ -53,3 +53,14 @@ type Point3D struct {
 	Position [3]float64 `json:"position"`
 	Color    [3]uint8   `json:"color"`
 }
+
+// Triangle holds vertex indices.
+type Triangle struct {
+	A, B, C int
+}
+
+// Mesh is a triangle mesh.
+type Mesh struct {
+	Vertices [][3]float64
+	Triangles []Triangle
+}
