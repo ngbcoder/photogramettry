@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ingest, runFeatures, runSfM } from '../api'
+import { ingest, runFeatures, runSfM, runMVS } from '../api'
 
 type Frame = { id: number; path: string; width: number; height: number }
 
@@ -49,6 +49,19 @@ export default function ImagesPanel() {
     }
   }
 
+  const onMVS = async () => {
+    setBusy(true)
+    setStatus('running MVS...')
+    try {
+      const res = await runMVS(inputDir)
+      setStatus(`mvs done: ${res.points} points, ${res.triangles} tris`)
+    } catch (e) {
+      setStatus(`error: ${e}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
@@ -78,6 +91,13 @@ export default function ImagesPanel() {
           disabled={busy || frames.length < 2}
         >
           SfM
+        </button>
+        <button
+          className="px-3 py-1 rounded bg-orange-600 text-white text-sm disabled:opacity-50"
+          onClick={onMVS}
+          disabled={busy || frames.length < 2}
+        >
+          MVS
         </button>
       </div>
       <div className="text-sm text-gray-500">{status}</div>
