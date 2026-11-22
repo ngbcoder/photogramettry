@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ingest, runFeatures, runSfM, runMVS } from '../api'
+import { ingest, runFeatures, runSfM, runMVS, runMesh } from '../api'
 
 type Frame = { id: number; path: string; width: number; height: number }
 
@@ -62,6 +62,19 @@ export default function ImagesPanel() {
     }
   }
 
+  const onMesh = async () => {
+    setBusy(true)
+    setStatus('running mesh...')
+    try {
+      const res = await runMesh(inputDir)
+      setStatus(`mesh done: ${res.vertices} verts, ${res.triangles} tris`)
+    } catch (e) {
+      setStatus(`error: ${e}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
@@ -98,6 +111,13 @@ export default function ImagesPanel() {
           disabled={busy || frames.length < 2}
         >
           MVS
+        </button>
+        <button
+          className="px-3 py-1 rounded bg-pink-600 text-white text-sm disabled:opacity-50"
+          onClick={onMesh}
+          disabled={busy || frames.length < 2}
+        >
+          Mesh
         </button>
       </div>
       <div className="text-sm text-gray-500">{status}</div>
