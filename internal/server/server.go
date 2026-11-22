@@ -121,6 +121,10 @@ func (s *Server) withMiddleware(next http.Handler) http.Handler {
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 			}
 		}()
+		start := time.Now()
+		defer func() {
+			s.log.Debug("request", "method", r.Method, "path", r.URL.Path, "dur", time.Since(start))
+		}()
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
