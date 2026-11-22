@@ -131,9 +131,9 @@ Tracking file. Update checkboxes as work completes. Milestones are intentionally
 - [ ] Results summary panel (points, tris, error)
 
 ## Phase 8 — Export & Project Management
-- [ ] Implement `pkg/export/ply.go` (ASCII + binary)
-- [ ] Implement `pkg/export/obj.go` (+ MTL)
-- [ ] Add `/api/export` endpoint
+- [x] Implement `pkg/export/ply.go` (ASCII) via export.go
+- [x] Implement `pkg/export/obj.go` (+ UV) via export.go
+- [x] Add `/api/export` endpoint
 - [ ] Project save/load with full state
 - [ ] Recent projects list
 - [ ] Auto-save
